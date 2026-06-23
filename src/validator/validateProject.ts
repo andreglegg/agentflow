@@ -26,30 +26,133 @@ function asStringValue(value: ValueNode): string | undefined {
   return value.kind === "string" ? value.value : undefined;
 }
 
-function asStringArray(value: ValueNode): string[] {
-  if (value.kind === "array") {
-    return value.elements
-      .filter((e): e is Extract<ValueNode, { kind: "string" }> => e.kind === "string")
-      .map((e) => e.value);
-  }
-  return value.kind === "string" ? [value.value] : [];
-}
-
-function asIdentifierArray(value: ValueNode): string[] {
-  if (value.kind === "array") {
-    return value.elements
-      .filter(
-        (e): e is Extract<ValueNode, { kind: "identifier" } | { kind: "string" }> =>
-          e.kind === "identifier" || e.kind === "string",
-      )
-      .map((e) => e.value);
-  }
-  if (value.kind === "identifier" || value.kind === "string") return [value.value];
-  return [];
-}
-
 function findProp(props: PropertyNode[], key: string): PropertyNode | undefined {
   return props.find((p) => p.key === key);
+}
+
+function malformed(
+  diagnostics: Diagnostic[],
+  file: string,
+  prop: PropertyNode,
+  expected: string,
+): void {
+  diagnostics.push({
+    severity: "error",
+    code: "AFV010",
+    message: `Property ${JSON.stringify(prop.key)} must be ${expected}.`,
+    file,
+    line: prop.loc.line,
+    column: prop.loc.column,
+    hint: `Change ${prop.key} to ${expected}.`,
+  });
+}
+
+function requireString(
+  prop: PropertyNode | undefined,
+  diagnostics: Diagnostic[],
+  file: string,
+): string | undefined {
+  if (prop === undefined) return undefined;
+  const value = asStringValue(prop.value);
+  if (value === undefined) malformed(diagnostics, file, prop, "a quoted string");
+  return value;
+}
+
+function requireStringArray(
+  prop: PropertyNode | undefined,
+  diagnostics: Diagnostic[],
+  file: string,
+): string[] {
+  if (prop === undefined) return [];
+  if (prop.value.kind !== "array") {
+    malformed(diagnostics, file, prop, "an array of quoted strings");
+    return [];
+  }
+  const values: string[] = [];
+  for (const element of prop.value.elements) {
+    if (element.kind !== "string") {
+      diagnostics.push({
+        severity: "error",
+        code: "AFV010",
+        message: `Property ${JSON.stringify(prop.key)} must contain only quoted strings.`,
+        file,
+        line: element.loc.line,
+        column: element.loc.column,
+        hint: `Remove non-string values from ${prop.key}.`,
+      });
+      continue;
+    }
+    values.push(element.value);
+  }
+  return values;
+}
+
+function requireNameArray(
+  prop: PropertyNode | undefined,
+  diagnostics: Diagnostic[],
+  file: string,
+): string[] {
+  if (prop === undefined) return [];
+  if (prop.value.kind !== "array") {
+    malformed(diagnostics, file, prop, "an array of identifiers or quoted strings");
+    return [];
+  }
+  const values: string[] = [];
+  for (const element of prop.value.elements) {
+    if (element.kind !== "identifier" && element.kind !== "string") {
+      diagnostics.push({
+        severity: "error",
+        code: "AFV010",
+        message: `Property ${JSON.stringify(prop.key)} must contain only identifiers or quoted strings.`,
+        file,
+        line: element.loc.line,
+        column: element.loc.column,
+        hint: `Remove non-name values from ${prop.key}.`,
+      });
+      continue;
+    }
+    values.push(element.value);
+  }
+  return values;
+}
+
+function requireIdentifierOrString(
+  prop: PropertyNode | undefined,
+  diagnostics: Diagnostic[],
+  file: string,
+): string | undefined {
+  if (prop === undefined) return undefined;
+  if (prop.value.kind === "identifier" || prop.value.kind === "string") {
+    return prop.value.value;
+  }
+  malformed(diagnostics, file, prop, "an identifier or quoted string");
+  return undefined;
+}
+
+function duplicateSection(
+  diagnostics: Diagnostic[],
+  file: string,
+  section: string,
+  line: number,
+  column: number,
+): void {
+  diagnostics.push({
+    severity: "error",
+    code: "AFV008",
+    message: `Duplicate ${section} section.`,
+    file,
+    line,
+    column,
+    hint: `Keep a single ${section} section in the project block.`,
+  });
+}
+
+function mergePermissions(target: PermissionIR, source: PermissionIR): void {
+  target.filesystem.read.push(...source.filesystem.read);
+  target.filesystem.write.push(...source.filesystem.write);
+  target.filesystem.deny.push(...source.filesystem.deny);
+  target.shell.allow.push(...source.shell.allow);
+  target.shell.deny.push(...source.shell.deny);
 }
 
 export function validateProject(projects: ProjectNode[], file: string): ValidateResult {
@@ -88,13 +191,16 @@ export function validateProject(projects: ProjectNode[], file: string): Validate
   const commands: CommandIR[] = [];
   let commandsDeclared = false;
   const workflows: Record<string, string[]> = {};
+  const seenWorkflows = new Map<string, true>();
   const agents: AgentIR[] = [];
   const agentEntries: { agent: AgentIR; node: AgentNode }[] = [];
   const outputs: OutputIR[] = [];
+  const seenOutputs = new Map<string, true>();
   let permissions: PermissionIR = {
     filesystem: { read: [], write: [], deny: [] },
     shell: { allow: [], deny: [] },
   };
+  let permissionsDeclared = false;
 
   const seenCommands = new Map<string, true>();
   const seenAgents = new Map<string, true>();
@@ -105,26 +211,32 @@ export function validateProject(projects: ProjectNode[], file: string): Validate
         properties.push(item);
         break;
       case "Rules":
+        if (rulesDeclared)
+          duplicateSection(diagnostics, file, "rules", item.loc.line, item.loc.column);
         rulesDeclared = true;
-        rulesIR = item.rules.map((r) =>
-          r.kind === "named"
-            ? {
-                id: r.name,
-                text: namedRuleText(r.name),
-                kind: "named" as const,
-                line: r.loc.line,
-                column: r.loc.column,
-              }
-            : {
-                id: r.text,
-                text: r.text,
-                kind: "inline" as const,
-                line: r.loc.line,
-                column: r.loc.column,
-              },
+        rulesIR.push(
+          ...item.rules.map((r) =>
+            r.kind === "named"
+              ? {
+                  id: r.name,
+                  text: namedRuleText(r.name),
+                  kind: "named" as const,
+                  line: r.loc.line,
+                  column: r.loc.column,
+                }
+              : {
+                  id: r.text,
+                  text: r.text,
+                  kind: "inline" as const,
+                  line: r.loc.line,
+                  column: r.loc.column,
+                },
+          ),
         );
         break;
       case "Commands":
+        if (commandsDeclared)
+          duplicateSection(diagnostics, file, "commands", item.loc.line, item.loc.column);
         commandsDeclared = true;
         for (const entry of item.entries) {
           if (seenCommands.has(entry.name)) {
@@ -144,7 +256,20 @@ export function validateProject(projects: ProjectNode[], file: string): Validate
         }
         break;
       case "Workflow":
-        workflows[item.id] = item.steps.map((s) => s.name);
+        if (seenWorkflows.has(item.id)) {
+          diagnostics.push({
+            severity: "error",
+            code: "AFV009",
+            message: `Duplicate workflow ${JSON.stringify(item.id)}.`,
+            file,
+            line: item.idLoc.line,
+            column: item.idLoc.column,
+            hint: "Workflow names must be unique.",
+          });
+        } else {
+          seenWorkflows.set(item.id, true);
+          workflows[item.id] = item.steps.map((s) => s.name);
+        }
         break;
       case "Agent": {
         const agent = buildAgent(item, diagnostics, file, seenAgents);
@@ -153,18 +278,40 @@ export function validateProject(projects: ProjectNode[], file: string): Validate
         break;
       }
       case "Permissions":
-        permissions = buildPermissions(item, diagnostics, file);
+        if (permissionsDeclared)
+          duplicateSection(
+            diagnostics,
+            file,
+            "permissions",
+            item.loc.line,
+            item.loc.column,
+          );
+        permissionsDeclared = true;
+        mergePermissions(permissions, buildPermissions(item, diagnostics, file));
         break;
       case "Output":
-        outputs.push(buildOutput(item));
+        if (seenOutputs.has(item.id)) {
+          diagnostics.push({
+            severity: "error",
+            code: "AFV011",
+            message: `Duplicate output ${JSON.stringify(item.id)}.`,
+            file,
+            line: item.idLoc.line,
+            column: item.idLoc.column,
+            hint: "Output names must be unique.",
+          });
+        } else {
+          seenOutputs.set(item.id, true);
+          outputs.push(buildOutput(item, diagnostics, file));
+        }
         break;
     }
   }
 
   // Project name (required, non-empty).
   const nameProp = findProp(properties, "name");
-  const name = nameProp ? asStringValue(nameProp.value) : undefined;
-  if (name === undefined || name.trim() === "") {
+  const name = requireString(nameProp, diagnostics, file);
+  if (nameProp === undefined || name?.trim() === "") {
     diagnostics.push({
       severity: "error",
       code: "AFV002",
@@ -177,9 +324,9 @@ export function validateProject(projects: ProjectNode[], file: string): Validate
   }
 
   const versionProp = findProp(properties, "version");
-  const version = versionProp ? asStringValue(versionProp.value) : undefined;
+  const version = requireString(versionProp, diagnostics, file);
   const stackProp = findProp(properties, "stack");
-  const stack = stackProp ? asStringArray(stackProp.value) : [];
+  const stack = requireStringArray(stackProp, diagnostics, file);
 
   // Agent workflow references must resolve. Use the exact source node each
   // agent was built from so duplicate-named agents still report distinct loc.
@@ -236,21 +383,19 @@ function buildAgent(
 
   const purposeProp = findProp(node.props, "purpose");
   const toolsProp = findProp(node.props, "tools");
-  const workflowProp = findProp(node.props, "workflow");
 
   const agent: AgentIR = {
     name: node.id,
-    tools: toolsProp ? asIdentifierArray(toolsProp.value) : [],
+    tools: requireNameArray(toolsProp, diagnostics, file),
   };
-  if (purposeProp) {
-    const p = asStringValue(purposeProp.value);
-    if (p !== undefined) agent.purpose = p;
-  }
-  if (workflowProp && workflowProp.value.kind === "identifier") {
-    agent.workflow = workflowProp.value.value;
-  } else if (workflowProp && workflowProp.value.kind === "string") {
-    agent.workflow = workflowProp.value.value;
-  }
+  const purpose = requireString(purposeProp, diagnostics, file);
+  if (purpose !== undefined) agent.purpose = purpose;
+  const workflow = requireIdentifierOrString(
+    findProp(node.props, "workflow"),
+    diagnostics,
+    file,
+  );
+  if (workflow !== undefined) agent.workflow = workflow;
   return agent;
 }
 
@@ -316,21 +461,21 @@ function buildPermissions(
   return perm;
 }
 
-function buildOutput(node: OutputNode): OutputIR {
+function buildOutput(
+  node: OutputNode,
+  diagnostics: Diagnostic[],
+  file: string,
+): OutputIR {
   const includeProp = findProp(node.props, "include");
-  const styleProp = findProp(node.props, "style");
   const out: OutputIR = {
     name: node.id,
-    include: includeProp ? asIdentifierArray(includeProp.value) : [],
+    include: requireNameArray(includeProp, diagnostics, file),
   };
-  if (styleProp) {
-    const s =
-      styleProp.value.kind === "string"
-        ? styleProp.value.value
-        : styleProp.value.kind === "identifier"
-          ? styleProp.value.value
-          : undefined;
-    if (s !== undefined) out.style = s;
-  }
+  const style = requireIdentifierOrString(
+    findProp(node.props, "style"),
+    diagnostics,
+    file,
+  );
+  if (style !== undefined) out.style = style;
   return out;
 }

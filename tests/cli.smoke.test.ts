@@ -61,6 +61,20 @@ describe("cli smoke", () => {
     expect(runCheck({ cwd: dir })).toBe(0);
   });
 
+  it("check fails when source changes after build", () => {
+    expect(runBuild({ cwd: dir })).toBe(0);
+    expect(runCheck({ cwd: dir })).toBe(0);
+    const source = join(dir, ".agent/src/project.afx");
+    writeFileSync(
+      source,
+      readFileSync(source, "utf8").replace('name: "my-project"', 'name: "changed"'),
+      "utf8",
+    );
+    expect(runCheck({ cwd: dir })).toBe(1);
+    expect(runBuild({ cwd: dir })).toBe(0);
+    expect(runCheck({ cwd: dir })).toBe(0);
+  });
+
   it("validate and lint pass on the default project", () => {
     expect(runValidate({ cwd: dir })).toBe(0);
     expect(runLint({ cwd: dir })).toBe(0);
