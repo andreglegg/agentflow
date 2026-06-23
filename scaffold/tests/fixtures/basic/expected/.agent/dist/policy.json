@@ -1,0 +1,40 @@
+{
+  "$generatedBy": "agentflow",
+  "$source": [
+    ".agent/src/project.afx"
+  ],
+  "$doNotEdit": true,
+  "filesystem": {
+    "read": [
+      "src/**",
+      "tests/**",
+      "docs/**",
+      "package.json"
+    ],
+    "write": [
+      "src/**",
+      "tests/**",
+      "docs/**"
+    ],
+    "deny": [
+      ".env",
+      ".env.*",
+      "node_modules/**",
+      "dist/**",
+      ".git/**"
+    ]
+  },
+  "shell": {
+    "allow": [
+      "pnpm test",
+      "pnpm lint",
+      "pnpm build"
+    ],
+    "deny": [
+      "rm -rf",
+      "curl | bash",
+      "git push --force",
+      "sudo"
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+project AndreAgent {
+  name: "andre-agent"
+  version: "0.1.0"
+  stack: ["TypeScript", "React", "Electron", "SQLite"]
+
+  rules {
+    use_strict_typescript
+    prefer_small_focused_changes
+    read_before_write
+    run_tests_when_available
+    output_changed_files
+    rule "Do not rewrite large files unless necessary."
+  }
+
+  commands {
+    install: "pnpm install"
+    dev: "pnpm dev"
+    test: "pnpm test"
+    lint: "pnpm lint"
+    build: "pnpm build"
+  }
+
+  workflow safe_code_change {
+    step understand
+    step inspect
+    step plan
+    step edit
+    step test
+    step report
+  }
+
+  agent Coder {
+    purpose: "Implement features and bug fixes safely."
+    tools: [readFile, writeFile, searchRepo, runCommand]
+    workflow: safe_code_change
+  }
+
+  agent Reviewer {
+    purpose: "Review code for correctness, architecture, regressions, and test coverage."
+    tools: [readFile, searchRepo, runCommand]
+    workflow: safe_code_change
+  }
+
+  permissions {
+    filesystem {
+      read: ["src/**", "tests/**", "docs/**", "package.json"]
+      write: ["src/**", "tests/**", "docs/**"]
+      deny: [".env", ".env.*", "node_modules/**", "dist/**", ".git/**"]
+    }
+
+    shell {
+      allow: ["pnpm test", "pnpm lint", "pnpm build"]
+      deny: ["rm -rf", "curl | bash", "git push --force", "sudo"]
+    }
+  }
+
+  output DevSummary {
+    include: [changed_files, commands_run, test_result, risks]
+    style: concise
+  }
+}
