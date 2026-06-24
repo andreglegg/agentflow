@@ -18,6 +18,13 @@ Right now it builds:
 - `.agent/dist/build-info.json`
 - JSON schemas for the generated files
 
+## Install
+
+```bash
+npm install -g @aglegg/agentflow
+agentflow --help
+```
+
 ## Try it locally
 
 ```bash

@@ -1,9 +1,12 @@
 {
-  "name": "agentflow",
+  "name": "@aglegg/agentflow",
   "version": "0.1.0",
   "description": "CLI and compiler for AgentFlow .afx agent instruction projects.",
   "type": "module",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "Andre Glegg <andreglegg@me.com>",
   "homepage": "https://github.com/andreglegg/agentflow#readme",
   "repository": {

@@ -3,6 +3,7 @@
 /node_modules/
 /dist/
 *.tgz
+.npmrc
 
 /scaffold/node_modules/
 /scaffold/dist/
