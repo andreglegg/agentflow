@@ -1,5 +1,7 @@
 # AgentFlow
 
+[![CI](https://github.com/andreglegg/agentflow/actions/workflows/ci.yml/badge.svg)](https://github.com/andreglegg/agentflow/actions/workflows/ci.yml)
+
 First version of AgentFlow.
 
 AgentFlow is a small CLI for keeping agent instruction files in one place.
