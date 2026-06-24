@@ -1,0 +1,14 @@
+// LATER — not MVP, per D3. Language-level test blocks are a post-MVP feature; not parsed or supported by the MVP toolchain.
+test "coder uses safe workflow" {
+  agent: Coder
+  given: "Fix a failing TypeScript test."
+
+  expect {
+    workflow includes understand
+    workflow includes inspect
+    workflow includes edit
+    workflow includes test
+    output includes changed_files
+    output includes commands_run
+  }
+}

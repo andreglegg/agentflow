@@ -1,0 +1,19 @@
+{
+  "$generatedBy": "agentflow",
+  "$source": [
+    ".agent/src/project.afx"
+  ],
+  "$doNotEdit": true,
+  "agentflowVersion": "0.1.0",
+  "sourceHash": "sha256:f081871c3d9e68872b0a6a8729f6499f6198138a4b4da2849f8851e401ee0bcd",
+  "builtAt": "2026-06-22T00:00:00.000Z",
+  "outputs": {
+    ".agent/dist/manifest.json": "sha256:40e7f4f9b9c40097e5093b62f31f60870de6ef02d156ad8930e9e249930cc5f8",
+    ".agent/dist/policy.json": "sha256:765fbcdc0f272624eb844b0d150d3bfb3d5da15efca329dff9c24c5480a46936",
+    ".agent/dist/schemas/manifest.schema.json": "sha256:585aecf6b1a371fc05494fdc8725c90b82b5d473f46ea7c59c5cfdebda1d1933",
+    ".agent/dist/schemas/policy.schema.json": "sha256:d5b5ccc1919643b3cdf8d434feca1502e9866d43585d926b4b21658f0e6b6dcc",
+    "AGENTS.md": "sha256:add2bc70863c6a5903f904f06f231392a938a1dd35fd704936aa5cff707ffff3",
+    "CLAUDE.md": "sha256:7349cb6384399105c5b43094a95b4e49717713bb3796ac9acb1acfc9d4b0be8d",
+    "GEMINI.md": "sha256:d85d66abdcff4a6baa4734add2b06cc5b312c882ebe716c648f2fce1468d1307"
+  }
+}

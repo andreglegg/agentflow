@@ -1,0 +1,67 @@
+{
+  "$generatedBy": "agentflow",
+  "$source": [
+    ".agent/src/project.afx"
+  ],
+  "$doNotEdit": true,
+  "schemaVersion": "0.1.0",
+  "project": {
+    "name": "andre-agent",
+    "version": "0.1.0",
+    "stack": [
+      "TypeScript",
+      "React",
+      "Electron",
+      "SQLite"
+    ]
+  },
+  "commands": {
+    "install": "pnpm install",
+    "dev": "pnpm dev",
+    "test": "pnpm test",
+    "lint": "pnpm lint",
+    "build": "pnpm build"
+  },
+  "workflows": {
+    "safe_code_change": [
+      "understand",
+      "inspect",
+      "plan",
+      "edit",
+      "test",
+      "report"
+    ]
+  },
+  "agents": {
+    "Coder": {
+      "purpose": "Implement features and bug fixes safely.",
+      "tools": [
+        "readFile",
+        "writeFile",
+        "searchRepo",
+        "runCommand"
+      ],
+      "workflow": "safe_code_change"
+    },
+    "Reviewer": {
+      "purpose": "Review code for correctness, architecture, regressions, and test coverage.",
+      "tools": [
+        "readFile",
+        "searchRepo",
+        "runCommand"
+      ],
+      "workflow": "safe_code_change"
+    }
+  },
+  "outputs": {
+    "DevSummary": {
+      "include": [
+        "changed_files",
+        "commands_run",
+        "test_result",
+        "risks"
+      ],
+      "style": "concise"
+    }
+  }
+}

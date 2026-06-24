@@ -3,6 +3,29 @@
   "version": "0.1.0",
   "description": "CLI and compiler for AgentFlow .afx agent instruction projects.",
   "type": "module",
+  "license": "MIT",
+  "author": "Andre Glegg <andreglegg@me.com>",
+  "homepage": "https://github.com/andreglegg/agentflow#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andreglegg/agentflow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/andreglegg/agentflow/issues"
+  },
+  "keywords": [
+    "agent",
+    "agents",
+    "ai",
+    "llm",
+    "cli",
+    "compiler",
+    "afx",
+    "agents-md",
+    "claude",
+    "codegen",
+    "instructions"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
