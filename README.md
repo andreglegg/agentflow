@@ -1,8 +1,7 @@
 # AgentFlow
 
 [![CI](https://github.com/andreglegg/agentflow/actions/workflows/ci.yml/badge.svg)](https://github.com/andreglegg/agentflow/actions/workflows/ci.yml)
-
-First version of AgentFlow.
+[![npm](https://img.shields.io/npm/v/@aglegg/agentflow.svg)](https://www.npmjs.com/package/@aglegg/agentflow)
 
 AgentFlow is a small CLI for keeping agent instruction files in one place.
 You write one `.afx` file, then build the markdown files that different coding
@@ -20,34 +19,45 @@ Right now it builds:
 
 ## Install
 
+Install globally so the `agentflow` command is on your `PATH` (recommended):
+
 ```bash
 npm install -g @aglegg/agentflow
 agentflow --help
 ```
 
-## Try it locally
+Prefer not to install globally? Run it on demand with `npx` instead:
 
 ```bash
+npx @aglegg/agentflow --help
+```
+
+> A plain `npm install @aglegg/agentflow` (no `-g`) only adds the binary to the
+> project's `node_modules/.bin`, so the bare `agentflow` command won't be on
+> your `PATH` — use `npx agentflow ...` in that project, or install with `-g`.
+
+## Quick start
+
+```bash
+mkdir my-agent && cd my-agent
+agentflow init      # creates .agent/src/project.afx
+agentflow build     # generates AGENTS.md, CLAUDE.md, GEMINI.md, and JSON outputs
+```
+
+Then edit `.agent/src/project.afx` and re-run `agentflow build`. Use
+`agentflow check` in CI to fail when the generated files drift from the source.
+
+## Develop from source
+
+```bash
+git clone https://github.com/andreglegg/agentflow.git
+cd agentflow
 pnpm install
 pnpm test
 pnpm build
-```
 
-Run the CLI:
-
-```bash
-node dist/cli/main.js --help
-```
-
-Try it in another folder. After `pnpm build`, link the CLI once so `agentflow`
-is on your `PATH`:
-
-```bash
-pnpm link --global
-
-mkdir /tmp/agentflow-demo
-cd /tmp/agentflow-demo
-agentflow init
+node dist/cli/main.js --help   # run the freshly built CLI
+pnpm link --global             # or link it as `agentflow` on your PATH
 ```
 
 ## Commands
